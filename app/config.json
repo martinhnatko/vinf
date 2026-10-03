@@ -1,0 +1,17 @@
+{
+    "domain": "www.rottentomatoes.com",
+    "user_agent": "MartinHnatko-VINF-Crawler-StudentProject",
+    "timeout": 10,
+    "sleep": 2,
+    "seeds": [
+        "https://www.rottentomatoes.com/",
+        "https://www.rottentomatoes.com/browse/movies_in_theaters/",
+        "https://www.rottentomatoes.com/browse/movies_at_home/",
+        "https://www.rottentomatoes.com/browse/movies_coming_soon/"
+    ],
+    "headers": {
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9"
+    },
+    "data_dir": "data/raw"
+}

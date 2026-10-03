@@ -1,8 +1,12 @@
+from pathlib import Path
+
 from crawler import Crawler
+
+CONFIG_PATH = Path(__file__).with_name("config.json")
 
 
 def main():
-    crawler = Crawler()
+    crawler = Crawler(CONFIG_PATH)
     crawler.crawl()
 
 

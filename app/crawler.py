@@ -1,3 +1,4 @@
+import json #load config file
 import re #regex for extracting links
 import time #sleep between requests
 
@@ -7,8 +8,6 @@ from pathlib import Path #save html files
 from urllib.parse import urljoin, urlparse, urlunparse, urldefrag #url parsing and normalization
 from urllib.request import Request, urlopen #http requests
 from urllib.robotparser import RobotFileParser #robots.txt parser
-
-import config
 
 class Crawler:
 
@@ -21,13 +20,26 @@ class Crawler:
         r"^/m/[A-Za-z0-9_-]+/?$"
     )
 
-    def __init__(self):
-        self.frontier = deque(config.SEEDS)
-        self.queued = set(config.SEEDS)
+    def __init__(self, config_path):
+        with open(config_path, encoding="utf-8") as file:
+            config = json.load(file)
+
+        self.domain = config["domain"]
+        self.user_agent = config["user_agent"]
+        self.timeout = config["timeout"]
+        self.sleep = config["sleep"]
+        self.data_dir = Path(config["data_dir"])
+        self.headers = {
+            "User-Agent": self.user_agent,
+            **config["headers"]
+        }
+
+        self.frontier = deque(config["seeds"])
+        self.queued = set(config["seeds"])
         self.seen = set()
 
         self.robots = RobotFileParser()
-        self.robots.set_url(config.BASE_URL + "/robots.txt")
+        self.robots.set_url(f"https://{self.domain}/robots.txt")
         self.robots.read()
 
     def normalize_url(self, url):
@@ -46,7 +58,7 @@ class Crawler:
     def is_allowed_url(self, url):
         parsed = urlparse(url)
 
-        if parsed.netloc != config.DOMAIN:
+        if parsed.netloc != self.domain:
             return False
 
         return bool(self.MOVIE_RE.match(parsed.path))
@@ -68,12 +80,12 @@ class Crawler:
     def download(self, url):
         request = Request(
             url,
-            headers=config.HEADERS
+            headers=self.headers
         )
 
         with urlopen(
             request,
-            timeout=config.TIMEOUT
+            timeout=self.timeout
         ) as response:
 
             content_type = response.headers.get(
@@ -90,7 +102,7 @@ class Crawler:
             )
 
     def save_html(self, url, html):
-        directory = Path(config.DATA_DIR)
+        directory = self.data_dir
         directory.mkdir(
             parents=True,
             exist_ok=True
@@ -128,7 +140,7 @@ class Crawler:
             self.seen.add(url)
 
             if not self.robots.can_fetch(
-                config.USER_AGENT,
+                self.user_agent,
                 url
             ):
                 print("[ROBOTS]", url)
@@ -159,7 +171,7 @@ class Crawler:
                     f"frontier={len(self.frontier)}"
                 )
 
-                time.sleep(config.SLEEP)
+                time.sleep(self.sleep)
 
             except Exception as error:
                 print("[ERROR]", url, error)

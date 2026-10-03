@@ -3,6 +3,7 @@
     "user_agent": "MartinHnatko-VINF-Crawler-StudentProject",
     "timeout": 10,
     "sleep": 2,
+    "max_attempts": 3,
     "seeds": [
         "https://www.rottentomatoes.com/",
         "https://www.rottentomatoes.com/browse/movies_in_theaters/",

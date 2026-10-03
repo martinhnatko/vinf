@@ -31,6 +31,7 @@ class Crawler:
         self.user_agent = config["user_agent"]
         self.timeout = config["timeout"]
         self.sleep = config["sleep"]
+        self.max_attempts = config["max_attempts"]
         self.data_dir = Path(config["data_dir"])
         #user agent + other headers from config
         self.headers = {
@@ -41,6 +42,7 @@ class Crawler:
         self.frontier = deque(config["seeds"]) #urls to process
         self.queued = set(config["seeds"]) #urls that were already queued
         self.seen = set() #urls that were already processed
+        self.attempts = {} #number of failed attempts per url
 
         #download robots.txt
         self.robots = RobotFileParser()
@@ -140,6 +142,21 @@ class Crawler:
             self.frontier.append(link)
             self.queued.add(link)
 
+    def retry(self, url):
+        #put failed url back to the end of the frontier
+        self.attempts[url] = self.attempts.get(url, 0) + 1
+
+        if self.attempts[url] >= self.max_attempts:
+            print("[FAILED]", url)
+            return
+
+        self.seen.discard(url) #allow processing the url again
+        self.frontier.append(url)
+        print(
+            f"[RETRY] {url} "
+            f"attempt={self.attempts[url] + 1}/{self.max_attempts}"
+        )
+
     def crawl(self):
         #bfs crawl while the frontier is not empty
         while self.frontier:
@@ -186,10 +203,9 @@ class Crawler:
                     f"frontier={len(self.frontier)}"
                 )
 
-                time.sleep(self.sleep) #do not overload the server
-
             except Exception as error:
                 print("[ERROR]", url, error)
+                self.retry(url)
 
             finally:
-                time.sleep(self.sleep)
+                time.sleep(self.sleep) #do not overload the server

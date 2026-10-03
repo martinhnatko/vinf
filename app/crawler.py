@@ -190,3 +190,6 @@ class Crawler:
 
             except Exception as error:
                 print("[ERROR]", url, error)
+
+            finally:
+                time.sleep(self.sleep)

@@ -1,0 +1,47 @@
+vinf
+- knihy mozte mat 2ja v cviku ale domenu pod tym samostatne kazdy
+-deadliny su napisane k prednaske - ale myslia sa na cviko
+-min. 6x na cviko konzultovat - ale pred tym sa zapisat na webe
+-dat na to prihlasovanei aj linku na sukromnu stranku
+-kazda konzultacia 10-20 min - nemusite sediet od rana , ak ste 5. v poradi tak mozte prist neskor - ak pridete skor aspon sa nieco dozviete
+-python + iba selenium - v python uz mate url libku aj re , zvysok su textove subory + mozno nejake async volanie ci co
+	-ziadny beautifulsoup/xpuff
+-5class - crawler , extracter, parser, searcher.. (modularne)
+-guiko netreba
+-crawler - 2 stlpce -> linky ktore som videl a linky ktore som nevidel
+
+vyhladavanie v oboch castiach - embeddingy mozte pouzit ale ma to nevyhodu - ak mate malo tych dokumentov tak to nepretlaci
+prva cast projektu - domena
+druha cast - wikipedia distribuovane
+a potom spojit dokopy
+
+- 5-10 stranok pozriet pred konzultaciou - crawler moze tisice
+
+-ak tam bude captcha tak musite inu domenu
+-pozrite sa do robot.txt a tam pise ze co sa moze crawlovat
+-casto to maju stranky napisane
+-pri crawlerovi musi byt politness
+
+-nezaujimaju ho baseballove statistiky - ale roky ma rad - tie budeme vyuzivat ((kedy hral ten futbalista medzi rokmi..) - ale radsej ma TEXT
+-na konci mergnut tie 2 data - nieco bude tam a nieco tam
+-ziadne PROBABILITY IDF - kazdy musi mat vlastne ranking funkcie -> aj ked to bude blbost
+
+-crawlerom stiahnete a regexom prehladavatae
+-dokumentacia na webe staci - aj prezentacia - prebehne sa cely system - aj s ukazkou - commandline - dame tam nekonecnyy while aby som mohol dopyty davat donekonecna
+
+-odovzdanie  - staci git, zipko nemusite byt
+
+-crawlovat domenu - parsovat + extrahovat  - nad tym indexer/searcher
+-v 2. casti to spoijme s wikipediou - tam bude kvalitejsi nastroj pomocou lucene
+
+dokument -> len tie veci co vytiahnete
+
+1. konzultacia - co je zaujimave v domene (autor, pribuzne knihy..)
+
+
+
+-------
+staci tokeny delit podla whitespace - a mozme najprv odstranit ciarky a bodky
+	-pozor na cisla - tie sa nemozu delit podla whitespace
+
+v lucene mozme pouzit english analyzer, resp. mozme pouzit 2 a porovnat

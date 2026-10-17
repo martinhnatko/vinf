@@ -15,5 +15,6 @@
         "Accept-Language": "en-US,en;q=0.9"
     },
     "raw_data_dir": "data/raw",
-    "extracted_file": "data/movies.jsonl"
+    "extracted_file": "data/movies.jsonl",
+    "index_file": "data/index.json"
 }

@@ -45,3 +45,33 @@ staci tokeny delit podla whitespace - a mozme najprv odstranit ciarky a bodky
 	-pozor na cisla - tie sa nemozu delit podla whitespace
 
 v lucene mozme pouzit english analyzer, resp. mozme pouzit 2 a porovnat
+
+
+na skuske - vypocitat maximalny tf a potom euclidovska nvm co
+len par slov
+
+skore dokumentu tiez na skuske
+
+tf-idf
+
+dufa ze vsetci naimplementujeme kosinusovu podobnost lebo je to zaklad, ale nemusime
+
+v prvom projekte - ide o to ze vektorovy pouziteje na to aby ste mali rekorovske funkcie - booleovsky mozte ale nemusite
+-ak nedam booleovsky moze sa dostat top dokument taky ktory ten slova neobsahuje - pretlaca termy ktore tam nie su ale su vyznamne
+-mozte si tam dat prepinac
+-mozno sa ukaze ze vam staci overlap
+-je to ako krystalova gula - ideme sa nieco naucit - ideme sa pohrat
+-mate chudobne data cize nejake funkcie ani nezmenia poradie
+-par rankovacich funkcii a prepinacom prepinat
+-aj vahovanie mozte robit v realnom case - nechajte si tam len tf idf
+-co to spravi a nejaka uvaha ze preco to tak spravilo - ak zistite preco to zlyhalo atd tak to napiste
+-ak to nebude 100% nevadi
+
+-range nemusime riesit - lucene to potom vyriesi za nas 
+
+-na tu druhu cast prezentacia na 5 slajdov
+
+
+POZNAMKY PRE VEDUCEHO
+-neurobil som pauzavetlnost - je to velky problem?
+-vasa stranka mi stale dava ban a musim prepinat medzi vpnkami...

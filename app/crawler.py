@@ -32,7 +32,7 @@ class Crawler:
         self.timeout = config["timeout"]
         self.sleep = config["sleep"]
         self.max_attempts = config["max_attempts"]
-        self.data_dir = Path(config["data_dir"])
+        self.raw_data_dir = Path(config_path).resolve().parent / config["raw_data_dir"]
         #user agent + other headers from config
         self.headers = {
             "User-Agent": self.user_agent,
@@ -115,7 +115,7 @@ class Crawler:
 
     def save_html(self, url, html):
         #save page as <movie_name>.html
-        directory = self.data_dir
+        directory = self.raw_data_dir
         directory.mkdir(
             parents=True,
             exist_ok=True
@@ -209,3 +209,9 @@ class Crawler:
 
             finally:
                 time.sleep(self.sleep) #do not overload the server
+
+
+if __name__ == "__main__":
+    config_path = Path(__file__).with_name("config.json")
+    crawler = Crawler(config_path)
+    crawler.crawl()

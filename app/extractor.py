@@ -17,7 +17,7 @@ class Extractor:
 
     #individual values, without comma separators
     VALUE_RE = re.compile(
-        r'<(rt-link|rt-text)[^>]*data-qa="item-value"[^>]*>(.*?)</\1>',
+        r'<(?:rt-link|rt-text)[^>]*data-qa="item-value"[^>]*>(.*?)</(?:rt-link|rt-text)>',
         re.IGNORECASE | re.DOTALL
     )
 
@@ -82,7 +82,7 @@ class Extractor:
     def extract(self, html, source_file):
         info = {}
         for label, block in self.INFO_RE.findall(html):
-            values = [self.clean_text(value) for tag, value in self.VALUE_RE.findall(block)]
+            values = [self.clean_text(value) for value in self.VALUE_RE.findall(block)]
             #keep unique nonempty values in their original order
             info[self.clean_text(label)] = list(dict.fromkeys(v for v in values if v))
 

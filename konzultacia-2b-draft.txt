@@ -1,8 +1,7 @@
 ====== Konzultácia 2b ======
 
 ===== 1. Stav crawlera =====
-
-Crawler dokončil sťahovanie prirodzene po vyprázdnení fronty ''frontier''. Zameriava sa na filmové stránky [[https://www.rottentomatoes.com/|Rotten Tomatoes]] v tvare ''/m/...''.
+Crawler dokončil sťahovanie prirodzene po vyprázdnení fronty. Zameriava sa na filmové stránky [[https://www.rottentomatoes.com/|Rotten Tomatoes]] v tvare ''/m/...''.
 
 ^ Ukazovateľ ^ Hodnota ^
 | Stiahnuté HTML stránky | 20 253 |
@@ -37,16 +36,45 @@ INFO_RE = re.compile(
 
 Vyberá názov atribútu, napríklad Director, a HTML blok jeho hodnôt.
 
+<code html>
+<dt>
+    <rt-text data-qa="item-label">Director</rt-text>
+</dt>
+<dd>
+    <rt-link data-qa="item-value">Christopher Nolan</rt-link>
+</dd>
+</code>
+
+Regex získa:
+  * label: ''Director''
+  * obsah <nowiki><dd>...</dd></nowiki>, z ktorého sa následne vyberú jednotlivé hodnoty
+
 **Jednotlivé hodnoty item-value**
 
 <code python>
 VALUE_RE = re.compile(
-    r'<(rt-link|rt-text)[^>]*data-qa="item-value"[^>]*>(.*?)</\1>',
+    r'<(?:rt-link|rt-text)[^>]*data-qa="item-value"[^>]*>(.*?)</(?:rt-link|rt-text)>',
     re.IGNORECASE | re.DOTALL
 )
 </code>
 
 Vyberá jednotlivé hodnoty atribútu bez oddeľovacích čiarok.
+
+<code html>
+<rt-link data-qa="item-value">Sci-Fi</rt-link>
+<rt-link data-qa="item-value">Action</rt-link>
+<rt-link data-qa="item-value">Mystery & Thriller</rt-link>
+</code>
+
+Výsledok:
+
+<code>
+Sci-Fi
+Action
+Mystery & Thriller
+</code>
+
+''(?:rt-link|rt-text)'' znamená, že element môže byť ''rt-link'' alebo ''rt-text''. ''(.*?)'' zachytáva samotnú hodnotu.
 
 **Synopsa**
 
@@ -58,6 +86,14 @@ synopsis = self.find_text(
 
 Získava text synopsy, ktorý sa následne očistí od značiek, HTML entít a nadbytočných medzier.
 
+<code html>
+<rt-text data-qa="synopsis-value">
+    Dom Cobb (Leonardo DiCaprio) is a thief with the rare ability to enter people's dreams and steal their secrets from their subconscious.
+</rt-text>
+</code>
+
+Výsledkom je text medzi značkami bez okolitých medzier a zalomení riadkov.
+
 **Canonical URL**
 
 <code python>
@@ -65,6 +101,12 @@ match = re.search(r'<link rel="canonical" href="([^"]+)"', html)
 </code>
 
 Vyberá kanonickú URL filmu, takže rešpektuje aj presmerovania pôvodných odkazov.
+
+<code html>
+<link rel="canonical" href="https://www.rottentomatoes.com/m/inception" />
+</code>
+
+''([^"]+)'' zachytí jeden alebo viac znakov, ktoré nie sú úvodzovka, teda hodnotu ''href''. Výsledkom je ''https://www.rottentomatoes.com/m/inception''.
 
 **Popcornmeter**
 
@@ -78,6 +120,33 @@ if match:
 </code>
 
 Vyberá divácke hodnotenie z objektu ''audienceScore'' ako celé číslo 0–100; pri chýbajúcom hodnotení zostáva ''None''.
+
+<code json>
+{
+    "audienceScore":{
+        "averageRating":"4.4",
+        "score":"91",
+        "title":"Popcornmeter"
+    }
+}
+</code>
+
+  * Regex nájde objekt ''audienceScore''.
+  * ''[^}]*'' pokračuje v rámci objektu po znakoch, ktoré nie sú zatváracia zložená zátvorka.
+  * ''\d+'' znamená jednu alebo viac číslic; zátvorky ich zachytia.
+  * Výsledkom je ''91''.
+
+**Krátka legenda regexov**
+
+^ Zápis ^ Význam ^
+| <nowiki>.*?</nowiki> | ľubovoľné znaky, čo najkratší match |
+| <nowiki>[^>]*</nowiki> | nula alebo viac znakov okrem > |
+| <nowiki>[^"]+</nowiki> | jeden alebo viac znakov okrem úvodzovky |
+| <nowiki>\d+</nowiki> | jedna alebo viac číslic |
+| <nowiki>\w+</nowiki> | jedno alebo viac písmen, číslic alebo podčiarkovníkov |
+| <nowiki>\s*</nowiki> | nula alebo viac whitespace znakov |
+| <nowiki>( ... )</nowiki> | capture group |
+| <nowiki>(?: ... )</nowiki> | group bez capture |
 
 ===== 3. JSON-LD =====
 
@@ -103,6 +172,20 @@ for block in self.JSONLD_RE.findall(html):
                 actors.append(name)
         break
 </code>
+
+<code html>
+<script type="application/ld+json">
+{
+    "@type": "Movie",
+    "actor": [
+        {"name": "Leonardo DiCaprio"},
+        {"name": "Joseph Gordon-Levitt"}
+    ]
+}
+</script>
+</code>
+
+Regex iba nájde obsah script bloku. JSON samotný sa nespracúva regexom, ale cez ''json.loads()''; následne sa číta ''actor → name''.
 
 {{inception-actors.png|Inception Actors}}
 
@@ -161,6 +244,26 @@ def tokenize(text):
     return re.findall(r"\w+", text)
 </code>
 
+Príklad vstupu:
+
+<code>
+Dream_Horse is GREAT! 2021.
+</code>
+
+Po ''text.lower().replace("_", " ")'':
+
+<code>
+dream horse is great! 2021.
+</code>
+
+''re.findall(r"\w+", text)'' vráti:
+
+<code python>
+["dream", "horse", "is", "great", "2021"]
+</code>
+
+''\w'' znamená písmeno, číslicu alebo podčiarkovník a ''+'' znamená jeden alebo viac znakov. Podčiarkovníky pred regexom nahrádzame medzerami.
+
 Document ID je číslo riadku v ''movies.jsonl'', počítané od 0. Searcher používa rovnakú funkciu ''tokenize()'' importovanú z indexera.
 
 Pre každý term sa ukladá:
@@ -192,26 +295,31 @@ TF-IDF váhy sa neukladajú priamo. Searcher ich vypočíta z TF, DF a počtu do
 
 ===== 6. IDF a ranking =====
 
-**TF** je počet výskytov termu. **IDF** dáva vyššiu váhu vzácnejším termom. Váha termu v dokumente aj query je ''TF * IDF''.
+**TF** je počet výskytov termu.\\
+**IDF** dáva vyššiu váhu vzácnejším termom.\\
+Váha termu v dokumente aj query je ''TF * IDF''.
+
+Prvá voľba:
 
 ^ IDF metóda ^ Vzorec ^
 | Classic | ''log(N / df)'' |
 | Smooth | <nowiki>1 + log((N + 1) / (df + 1))</nowiki> |
 
-Používa sa prirodzený logaritmus.
+Druhá voľba:
 
 ^ Scoring ^ Vzorec ^
 | overlap | ''sum(query TF-IDF * document TF-IDF)'' |
 | cosine | ''overlap / (query norm * document norm)'' |
 | cosine + popcornmeter | ''cosine * (1 + popcornmeter / 100)'' |
 
-Overlap sčíta súčiny TF-IDF váh spoločných termov. Cosine tento súčet normalizuje podľa veľkosti query a dokumentu; norma dokumentu sa počíta z jeho celého TF-IDF vektora.
+Overlap sčíta súčiny TF-IDF váh spoločných termov.\\
+Cosine tento súčet normalizuje podľa veľkosti query a dokumentu; norma dokumentu sa počíta z jeho celého TF-IDF vektora.\\
+**Vlastná ranking funkcia zvýhodňuje textovo relevantné filmy podľa Popcornmetra.**
 
-Vlastná ranking funkcia zvýhodňuje textovo relevantné filmy podľa Popcornmetra. Rating nevytvára nových kandidátov: kandidáti stále pochádzajú iba z postings termov query. Pri chýbajúcom Popcornmetri je násobiteľ 1.0.
 
-Searcher vypisuje TOP 10 s document ID, názvom, rokom, Popcornmetrom, skóre a URL.
+Rating nevytvára nových kandidátov: kandidáti stále pochádzajú iba z postings termov query.
 
-**[SCREENSHOT: konzolové menu searcher.py s výberom IDF a scoringu]**
+{{konzola-vypis.png|Konzola}}
 
 ===== 7. Porovnanie výsledkov =====
 

@@ -11,7 +11,7 @@ Crawler dokončil sťahovanie prirodzene po vyprázdnení fronty. Zameriava sa n
 
 ===== 2. Extrakcia dát =====
 
-Vlastný ''extractor.py'' používa REGEX na extrakciu údajov z HTML. Z každej stránky vytvorí JSON záznam, výsledky uloží do ''data/movies.jsonl'' a následne odstráni duplicity.
+Vlastný ''extractor.py'' používa REGEX na extrakciu údajov z HTML a ''json.loads()'' na čítanie vložených JSON dát. Z každej stránky vytvorí JSON záznam, výsledky uloží do ''data/movies.jsonl'' a následne odstráni duplicity.
 
 Deduplikácia v extractore odstránila 3 záznamy s rovnakou canonical URL a rovnakými údajmi okrem ''source_file''. Výsledný ''movies.jsonl'' obsahuje **20 250 unikátnych filmových záznamov**.
 
@@ -25,6 +25,8 @@ original_language, source_file
 </code>
 
 **Movie Info label/value bloky**
+
+Z Movie Info získavame atribúty ''directors'', ''producers'', ''screenwriters'', ''genres'', ''release_date_theaters'', ''release_date_streaming'', ''runtime_minutes'', ''content_rating'', ''production_companies'' a ''original_language''.
 
 <code python>
 INFO_RE = re.compile(
@@ -74,8 +76,6 @@ Action
 Mystery & Thriller
 </code>
 
-''(?:rt-link|rt-text)'' znamená, že element môže byť ''rt-link'' alebo ''rt-text''. ''(.*?)'' zachytáva samotnú hodnotu.
-
 **Synopsa**
 
 <code python>
@@ -84,15 +84,11 @@ synopsis = self.find_text(
 )
 </code>
 
-Získava text synopsy, ktorý sa následne očistí od značiek, HTML entít a nadbytočných medzier.
-
 <code html>
 <rt-text data-qa="synopsis-value">
     Dom Cobb (Leonardo DiCaprio) is a thief with the rare ability to enter people's dreams and steal their secrets from their subconscious.
 </rt-text>
 </code>
-
-Výsledkom je text medzi značkami bez okolitých medzier a zalomení riadkov.
 
 **Canonical URL**
 
@@ -100,28 +96,42 @@ Výsledkom je text medzi značkami bez okolitých medzier a zalomení riadkov.
 match = re.search(r'<link rel="canonical" href="([^"]+)"', html)
 </code>
 
-Vyberá kanonickú URL filmu, takže rešpektuje aj presmerovania pôvodných odkazov.
+Vyberá kanonickú URL filmu deklarovanú priamo Rotten Tomatoes stránkou.
 
 <code html>
 <link rel="canonical" href="https://www.rottentomatoes.com/m/inception" />
 </code>
 
-''([^"]+)'' zachytí jeden alebo viac znakov, ktoré nie sú úvodzovka, teda hodnotu ''href''. Výsledkom je ''https://www.rottentomatoes.com/m/inception''.
-
 **Popcornmeter**
 
+Popcornmeter sa číta z vloženého JSON bloku typu ''application/json''. Regex vyberie iba obsah scriptu; samotné hodnotenie sa získa cez JSON parsing z ''audienceScore → score''.
+
 <code python>
+JSON_RE = re.compile(
+    r'<script[^>]*type="application/json"[^>]*>(.*?)</script>',
+    re.IGNORECASE | re.DOTALL
+)
+
 popcornmeter = None
-match = re.search(r'"audienceScore":\{[^}]*"score":"(\d+)"', html)
-if match:
-    value = int(match.group(1))
-    if 0 <= value <= 100:
-        popcornmeter = value
+for block in self.JSON_RE.findall(html):
+    try:
+        data = json.loads(block)
+    except json.JSONDecodeError:
+        continue
+
+    if isinstance(data, dict):
+        score = data.get("audienceScore", {}).get("score")
+        if score is not None:
+            value = int(score)
+            if 0 <= value <= 100:
+                popcornmeter = value
+                break
 </code>
 
 Vyberá divácke hodnotenie z objektu ''audienceScore'' ako celé číslo 0–100; pri chýbajúcom hodnotení zostáva ''None''.
 
-<code json>
+<code html>
+<script type="application/json">
 {
     "audienceScore":{
         "averageRating":"4.4",
@@ -129,24 +139,10 @@ Vyberá divácke hodnotenie z objektu ''audienceScore'' ako celé číslo 0–10
         "title":"Popcornmeter"
     }
 }
+</script>
 </code>
 
-  * Regex nájde objekt ''audienceScore''.
-  * ''[^}]*'' pokračuje v rámci objektu po znakoch, ktoré nie sú zatváracia zložená zátvorka.
-  * ''\d+'' znamená jednu alebo viac číslic; zátvorky ich zachytia.
-  * Výsledkom je ''91''.
-
-**Krátka legenda regexov**
-
-^ Zápis ^ Význam ^
-| <nowiki>.*?</nowiki> | ľubovoľné znaky, čo najkratší match |
-| <nowiki>[^>]*</nowiki> | nula alebo viac znakov okrem > |
-| <nowiki>[^"]+</nowiki> | jeden alebo viac znakov okrem úvodzovky |
-| <nowiki>\d+</nowiki> | jedna alebo viac číslic |
-| <nowiki>\w+</nowiki> | jedno alebo viac písmen, číslic alebo podčiarkovníkov |
-| <nowiki>\s*</nowiki> | nula alebo viac whitespace znakov |
-| <nowiki>( ... )</nowiki> | capture group |
-| <nowiki>(?: ... )</nowiki> | group bez capture |
+''json.loads()'' načíta objekt a z ''audienceScore → score'' sa získa reťazec ''"91"''.
 
 ===== 3. JSON-LD =====
 

@@ -27,6 +27,12 @@ class Extractor:
         re.IGNORECASE | re.DOTALL
     )
 
+    #json data with audience scores
+    JSON_RE = re.compile(
+        r'<script[^>]*type="application/json"[^>]*>(.*?)</script>',
+        re.IGNORECASE | re.DOTALL
+    )
+
     def __init__(self, config_path):
         #paths are relative to config.json
         with open(config_path, encoding="utf-8") as file:
@@ -136,11 +142,19 @@ class Extractor:
 
         #audience score is stored in the audienceScore object
         popcornmeter = None
-        match = re.search(r'"audienceScore":\{[^}]*"score":"(\d+)"', html)
-        if match:
-            value = int(match.group(1))
-            if 0 <= value <= 100:
-                popcornmeter = value
+        for block in self.JSON_RE.findall(html):
+            try:
+                data = json.loads(block)
+            except json.JSONDecodeError:
+                continue
+
+            if isinstance(data, dict):
+                score = data.get("audienceScore", {}).get("score")
+                if score is not None:
+                    value = int(score)
+                    if 0 <= value <= 100:
+                        popcornmeter = value
+                        break
 
         #keep only the rating, without the explanation in brackets
         rating = first("Rating")

@@ -1,0 +1,266 @@
+====== Konzultácia 2b ======
+
+===== 1. Stav crawlera =====
+
+Crawler dokončil sťahovanie prirodzene po vyprázdnení fronty ''frontier''. Zameriava sa na filmové stránky [[https://www.rottentomatoes.com/|Rotten Tomatoes]] v tvare ''/m/...''.
+
+^ Ukazovateľ ^ Hodnota ^
+| Stiahnuté HTML stránky | 20 253 |
+| Veľkosť HTML datasetu | 3 988 739 242 B, približne 4 GB |
+
+{{raw-screenshot.png|Adresár Raw}}
+
+===== 2. Extrakcia dát =====
+
+Vlastný ''extractor.py'' používa REGEX na extrakciu údajov z HTML. Z každej stránky vytvorí JSON záznam, výsledky uloží do ''data/movies.jsonl'' a následne odstráni duplicity.
+
+Deduplikácia v extractore odstránila 3 záznamy s rovnakou canonical URL a rovnakými údajmi okrem ''source_file''. Výsledný ''movies.jsonl'' obsahuje **20 250 unikátnych filmových záznamov**.
+
+Extrahované polia:
+
+<code>
+url, title, synopsis, directors, actors, producers, screenwriters,
+genres, release_date_theaters, release_date_streaming, year,
+runtime_minutes, content_rating, popcornmeter, production_companies,
+original_language, source_file
+</code>
+
+**Movie Info label/value bloky**
+
+<code python>
+INFO_RE = re.compile(
+    r'<rt-text[^>]*data-qa="item-label"[^>]*>(.*?)</rt-text>'
+    r'\s*</dt>\s*<dd[^>]*>(.*?)</dd>',
+    re.IGNORECASE | re.DOTALL
+)
+</code>
+
+Vyberá názov atribútu, napríklad Director, a HTML blok jeho hodnôt.
+
+**Jednotlivé hodnoty item-value**
+
+<code python>
+VALUE_RE = re.compile(
+    r'<(rt-link|rt-text)[^>]*data-qa="item-value"[^>]*>(.*?)</\1>',
+    re.IGNORECASE | re.DOTALL
+)
+</code>
+
+Vyberá jednotlivé hodnoty atribútu bez oddeľovacích čiarok.
+
+**Synopsa**
+
+<code python>
+synopsis = self.find_text(
+    r'<rt-text[^>]*data-qa="synopsis-value"[^>]*>(.*?)</rt-text>', html
+)
+</code>
+
+Získava text synopsy, ktorý sa následne očistí od značiek, HTML entít a nadbytočných medzier.
+
+**Canonical URL**
+
+<code python>
+match = re.search(r'<link rel="canonical" href="([^"]+)"', html)
+</code>
+
+Vyberá kanonickú URL filmu, takže rešpektuje aj presmerovania pôvodných odkazov.
+
+**Popcornmeter**
+
+<code python>
+popcornmeter = None
+match = re.search(r'"audienceScore":\{[^}]*"score":"(\d+)"', html)
+if match:
+    value = int(match.group(1))
+    if 0 <= value <= 100:
+        popcornmeter = value
+</code>
+
+Vyberá divácke hodnotenie z objektu ''audienceScore'' ako celé číslo 0–100; pri chýbajúcom hodnotení zostáva ''None''.
+
+===== 3. JSON-LD =====
+
+Mená hercov sa získavajú z vložených štruktúrovaných JSON-LD dát. REGEX nájde blok v HTML, jeho obsah načíta ''json.loads()'' a mená sa prečítajú z ''actor → name''.
+
+<code python>
+JSONLD_RE = re.compile(
+    r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>',
+    re.IGNORECASE | re.DOTALL
+)
+
+actors = []
+for block in self.JSONLD_RE.findall(html):
+    try:
+        data = json.loads(block)
+    except json.JSONDecodeError:
+        continue
+
+    if isinstance(data, dict) and data.get("@type") == "Movie":
+        for actor in data.get("actor", []):
+            name = actor["name"]
+            if name not in actors:
+                actors.append(name)
+        break
+</code>
+
+{{inception-actors.png|Inception Actors}}
+
+===== 4. Ukážka extrahovaného dokumentu =====
+
+Kompletný reálny záznam filmu Inception z movies.jsonl:
+
+<code json>
+{
+  "url": "https://www.rottentomatoes.com/m/inception",
+  "title": "Inception",
+  "synopsis": "Dom Cobb (Leonardo DiCaprio) is a thief with the rare ability to enter people's dreams and steal their secrets from their subconscious. His skill has made him a hot commodity in the world of corporate espionage but has also cost him everything he loves. Cobb gets a chance at redemption when he is offered a seemingly impossible task: Plant an idea in someone's mind. If he succeeds, it will be the perfect crime, but a dangerous enemy anticipates Cobb's every move.",
+  "directors": [
+    "Christopher Nolan"
+  ],
+  "actors": [
+    "Leonardo DiCaprio",
+    "Joseph Gordon-Levitt",
+    "Elliot Page",
+    "Tom Hardy",
+    "Ken Watanabe"
+  ],
+  "producers": [
+    "Emma Thomas"
+  ],
+  "screenwriters": [],
+  "genres": [
+    "Sci-Fi",
+    "Mystery & Thriller",
+    "Action"
+  ],
+  "release_date_theaters": "2010-07-16",
+  "release_date_streaming": "2013-06-20",
+  "year": 2010,
+  "runtime_minutes": 148,
+  "content_rating": "PG-13",
+  "popcornmeter": 91,
+  "production_companies": [
+    "Warner Bros.",
+    "Syncopy"
+  ],
+  "original_language": "English",
+  "source_file": "inception.html"
+}
+</code>
+
+Jeden riadok v ''movies.jsonl'' predstavuje jeden dokument. Ukážka je pre čitateľnosť formátovaná na viac riadkov.
+
+===== 5. Indexovanie =====
+
+Vlastný ''indexer.py'' indexuje iba ''title + synopsis''. Text prevedie na lowercase a rozdelí na slová a čísla bez stemmingu a odstraňovania stopwords.
+
+<code python>
+def tokenize(text):
+    return re.findall(r"[^\W_]+", text.lower())
+</code>
+
+Document ID je číslo riadku v ''movies.jsonl'', počítané od 0. Searcher používa rovnakú funkciu ''tokenize()'' importovanú z indexera.
+
+Pre každý term sa ukladá:
+
+  * ''df'' – počet dokumentov obsahujúcich term.
+  * ''postings'' – mapovanie document ID na raw TF, teda počet výskytov termu v dokumente.
+
+Index obsahuje **20 250 dokumentov a 50 393 termov**. Ukladá sa do ''data/index.json''.
+
+Ukážka skutočného termu z indexu:
+
+<code json>
+{
+  "document_count": 20250,
+  "terms": {
+    "subconscious": {
+      "df": 3,
+      "postings": {
+        "8922": 1,
+        "9997": 1,
+        "18008": 1
+      }
+    }
+  }
+}
+</code>
+
+TF-IDF váhy sa neukladajú priamo. Searcher ich vypočíta z TF, DF a počtu dokumentov N podľa zvolenej IDF metódy.
+
+===== 6. IDF a ranking =====
+
+**TF** je počet výskytov termu. **IDF** dáva vyššiu váhu vzácnejším termom. Váha termu v dokumente aj query je ''TF * IDF''.
+
+^ IDF metóda ^ Vzorec ^
+| Classic | ''log(N / df)'' |
+| Smooth | ''1 + log((N + 1) / (df + 1))'' |
+
+Používa sa prirodzený logaritmus.
+
+^ Scoring ^ Vzorec ^
+| overlap | ''sum(query TF-IDF * document TF-IDF)'' |
+| cosine | ''overlap / (query norm * document norm)'' |
+| cosine + popcornmeter | ''cosine * (1 + popcornmeter / 100)'' |
+
+Overlap sčíta súčiny TF-IDF váh spoločných termov. Cosine tento súčet normalizuje podľa veľkosti query a dokumentu; norma dokumentu sa počíta z jeho celého TF-IDF vektora.
+
+Vlastná ranking funkcia zvýhodňuje textovo relevantné filmy podľa Popcornmetra. Rating nevytvára nových kandidátov: kandidáti stále pochádzajú iba z postings termov query. Pri chýbajúcom Popcornmetri je násobiteľ 1.0.
+
+Searcher vypisuje TOP 10 s document ID, názvom, rokom, Popcornmetrom, skóre a URL.
+
+**[SCREENSHOT: konzolové menu searcher.py s výberom IDF a scoringu]**
+
+===== 7. Porovnanie výsledkov =====
+
+Testovací dopyt:
+
+<code>
+dream subconscious secrets
+</code>
+
+^ IDF ^ Scoring ^ 1. výsledok ^ Jeho skóre ^ Pozícia Inception ^ Poznámka ^
+| classic | overlap | Inception | 96.227336 | 1. | Najvyšší súčet váh spoločných termov. |
+| classic | cosine | Inception | 0.212028 | 1. | Prvé zostáva aj po normalizácii. |
+| classic | cosine + popcornmeter | Inception | 0.404973 | 1. | Popcornmeter 91 zvýši skóre násobiteľom 1.91. |
+| smooth | overlap | Inception | 118.857458 | 1. | Zmena IDF nemení prvý výsledok. |
+| smooth | cosine | Dream a Little Dream | 0.201739 | 2. | Inception má skóre 0.191797. |
+| smooth | cosine + popcornmeter | Inception | 0.366332 | 1. | Po zohľadnení hodnotenia sa vracia na prvé miesto. |
+
+**Inception je prvé v 5 zo 6 kombinácií.** Jedinou výnimkou je smooth IDF + cosine, kde je prvé Dream a Little Dream a druhé Inception.
+
+Počty dokumentov obsahujúcich termy sú overené z indexu:
+
+^ Term ^ DF ^ Classic IDF ^ Smooth IDF ^
+| dream | 351 | 4.055124 | 5.052328 |
+| subconscious | 3 | 8.817298 | 9.529665 |
+| secrets | 275 | 4.299139 | 5.295559 |
+
+Pri classic IDF má veľmi vzácny term ''subconscious'' vysokú váhu, čo pomáha filmu Inception. Smooth IDF relatívne znižuje jeho výhodu oproti častejšiemu ''dream'': oba termy dostanú vyššiu váhu, ale pomerný nárast je väčší pri ''dream''.
+
+Dream a Little Dream obsahuje term ''dream'' trikrát. Pri smooth IDF a cosine normalizácii sa preto dostáva pred Inception. Ide o dôsledok rozdielneho váhovania termov, nie chybu výpočtu.
+
+Inception obsahuje ''subconscious'' a ''secrets'' po jednom výskyte. Term ''dream'' v ňom nie je, pretože synopsa obsahuje tvar ''dreams'' a nepoužíva sa stemming.
+
+**Efekt vlastnej funkcie s Popcornmetrom**
+
+Porovnanie pri classic IDF:
+
+^ Film ^ Popcornmeter ^ Cosine: miesto ^ Cosine: skóre ^ Cosine + Popcornmeter: miesto ^ Výsledné skóre ^
+| Dream Horse | 97 | 5. | 0.143122 | 3. | 0.281950 |
+| Latency | 21 | 3. | 0.149679 | 10. | 0.181112 |
+
+<code>
+Dream Horse:
+0.143122 * (1 + 97 / 100) ≈ 0.281950
+
+Latency:
+0.149679 * (1 + 21 / 100) ≈ 0.181112
+</code>
+
+Dream Horse sa posunie vyššie vďaka vysokému diváckemu hodnoteniu. Skóre filmu Latency tiež narastie, ale menej než skóre ostatných kandidátov, takže v poradí klesne. Textová podobnosť zostáva základom skóre; Popcornmeter ju násobí faktorom od 1 do 2 a zvýhodňuje lepšie hodnotené filmy medzi textovými kandidátmi.
+
+===== 8. Záver =====
+
+Crawler a extractor sú hotové, dáta sú uložené v JSONL a nad nimi je vytvorený vlastný inverted index. Vyhľadávanie podporuje dve IDF varianty a tri scoring metódy vrátane vlastného rozšírenia s Popcornmetrom. Rozdiely vo váhovaní aj výslednom poradí sú viditeľné na reálnom testovacom dopyte.

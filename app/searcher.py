@@ -78,17 +78,16 @@ def main():
 
     while True:
         idf_choice = input(
-            "\nIDF (N = documents, df = documents containing the term, log = natural log):\n"
+            "\nIDF:\n"
             "1 - classic: log(N / df)\n"
             "2 - smooth: 1 + log((N + 1) / (df + 1))\n"
             "Choice: "
         ).strip()
         scoring_choice = input(
-            "\nScoring (q = query vector, d = document vector, weight = TF * IDF):\n"
-            "1 - overlap: dot(q, d) = sum(q[t] * d[t])\n"
-            "2 - cosine: dot(q, d) / (||q|| * ||d||)\n"
+            "\nScoring:\n"
+            "1 - overlap: sum(query TF-IDF * document TF-IDF)\n"
+            "2 - cosine: overlap / (query norm * document norm)\n"
             "3 - cosine + popcornmeter: cosine * (1 + popcornmeter / 100)\n"
-            "    Missing popcornmeter: multiplier = 1.0\n"
             "Choice: "
         ).strip()
         if idf_choice not in ("1", "2") or scoring_choice not in ("1", "2", "3"):

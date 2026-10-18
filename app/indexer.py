@@ -7,7 +7,8 @@ from pathlib import Path #paths relative to config.json
 
 def tokenize(text):
     #lowercase letters and numbers, without underscores
-    return re.findall(r"[^\W_]+", text.lower())
+    text = text.lower().replace("_", " ")
+    return re.findall(r"\w+", text)
 
 
 class Indexer:

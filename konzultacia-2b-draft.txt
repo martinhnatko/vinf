@@ -157,7 +157,8 @@ Vlastný ''indexer.py'' indexuje iba ''title + synopsis''. Text prevedie na lowe
 
 <code python>
 def tokenize(text):
-    return re.findall(r"[^\W_]+", text.lower())
+    text = text.lower().replace("_", " ")
+    return re.findall(r"\w+", text)
 </code>
 
 Document ID je číslo riadku v ''movies.jsonl'', počítané od 0. Searcher používa rovnakú funkciu ''tokenize()'' importovanú z indexera.
@@ -195,7 +196,7 @@ TF-IDF váhy sa neukladajú priamo. Searcher ich vypočíta z TF, DF a počtu do
 
 ^ IDF metóda ^ Vzorec ^
 | Classic | ''log(N / df)'' |
-| Smooth | ''1 + log((N + 1) / (df + 1))'' |
+| Smooth | <nowiki>1 + log((N + 1) / (df + 1))</nowiki> |
 
 Používa sa prirodzený logaritmus.
 

@@ -134,6 +134,14 @@ class Extractor:
                         actors.append(name)
                 break
 
+        #audience score is stored in the audienceScore object
+        popcornmeter = None
+        match = re.search(r'"audienceScore":\{[^}]*"score":"(\d+)"', html)
+        if match:
+            value = int(match.group(1))
+            if 0 <= value <= 100:
+                popcornmeter = value
+
         #keep only the rating, without the explanation in brackets
         rating = first("Rating")
         if rating:
@@ -153,6 +161,7 @@ class Extractor:
             "year": year,
             "runtime_minutes": self.parse_runtime(first("Runtime")),
             "content_rating": rating,
+            "popcornmeter": popcornmeter,
             "production_companies": info.get("Production Co", []),
             "original_language": first("Original Language"),
             "source_file": Path(source_file).name

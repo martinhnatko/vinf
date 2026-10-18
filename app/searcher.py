@@ -51,7 +51,7 @@ class Searcher:
                 document_weight = tf * self.idf[term]
                 scores[document_id] = scores.get(document_id, 0.0) + query_weight * document_weight
 
-        if scoring == "cosine":
+        if scoring in ("cosine", "cosine_popcornmeter"):
             query_norm = math.sqrt(sum(weight ** 2 for weight in query_weights.values()))
             if query_norm == 0:
                 return []
@@ -63,6 +63,13 @@ class Searcher:
                 else:
                     del scores[document_id]
 
+        #boost text similarity using popcornmeter, if available
+        if scoring == "cosine_popcornmeter":
+            for document_id in scores:
+                popcornmeter = self.movies[document_id]["popcornmeter"]
+                if popcornmeter is not None:
+                    scores[document_id] *= 1 + popcornmeter / 100
+
         return sorted(scores.items(), key=lambda item: item[1], reverse=True)[:10]
 
 
@@ -70,14 +77,31 @@ def main():
     config_path = Path(__file__).with_name("config.json")
 
     while True:
-        idf_choice = input("\nIDF:\n1 - classic\n2 - smooth\nChoice: ").strip()
-        scoring_choice = input("\nScoring:\n1 - overlap\n2 - cosine\nChoice: ").strip()
-        if idf_choice not in ("1", "2") or scoring_choice not in ("1", "2"):
+        idf_choice = input(
+            "\nIDF (N = documents, df = documents containing the term, log = natural log):\n"
+            "1 - classic: log(N / df)\n"
+            "2 - smooth: 1 + log((N + 1) / (df + 1))\n"
+            "Choice: "
+        ).strip()
+        scoring_choice = input(
+            "\nScoring (q = query vector, d = document vector, weight = TF * IDF):\n"
+            "1 - overlap: dot(q, d) = sum(q[t] * d[t])\n"
+            "2 - cosine: dot(q, d) / (||q|| * ||d||)\n"
+            "3 - cosine + popcornmeter: cosine * (1 + popcornmeter / 100)\n"
+            "    Missing popcornmeter: multiplier = 1.0\n"
+            "Choice: "
+        ).strip()
+        if idf_choice not in ("1", "2") or scoring_choice not in ("1", "2", "3"):
             print("Invalid choice")
             continue
 
         idf_method = "classic" if idf_choice == "1" else "smooth"
-        scoring = "overlap" if scoring_choice == "1" else "cosine"
+        if scoring_choice == "1":
+            scoring = "overlap"
+        elif scoring_choice == "2":
+            scoring = "cosine"
+        else:
+            scoring = "cosine_popcornmeter"
 
         query = input("\nQuery: ").strip()
         print()
@@ -92,7 +116,8 @@ def main():
 
         for rank, (document_id, score) in enumerate(results, start=1):
             movie = searcher.movies[document_id]
-            print(f"{rank}. ID: {document_id} | {movie['title']} | score: {score:.6f}")
+            print(f"{rank}. ID: {document_id} | {movie['title']} | year: {movie['year']}"
+                  f" | popcornmeter: {movie['popcornmeter']} | score: {score:.6f}")
             print(movie["url"])
             print()
 

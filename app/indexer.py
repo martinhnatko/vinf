@@ -5,6 +5,11 @@ from collections import Counter #count tokens in a document
 from pathlib import Path #paths relative to config.json
 
 
+def tokenize(text):
+    #lowercase letters and numbers, without underscores
+    return re.findall(r"[^\W_]+", text.lower())
+
+
 class Indexer:
 
     def __init__(self, config_path):
@@ -22,9 +27,7 @@ class Indexer:
             for document_id, line in enumerate(file):
                 movie = json.loads(line)
                 text = (movie["title"] or "") + " " + (movie["synopsis"] or "")
-                #lowercase letters and numbers, without underscores
-                tokens = re.findall(r"[^\W_]+", text.lower())
-                frequencies = Counter(tokens)
+                frequencies = Counter(tokenize(text))
 
                 for term, tf in frequencies.items():
                     if term not in index["terms"]:

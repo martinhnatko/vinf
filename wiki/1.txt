@@ -1,0 +1,67 @@
+====== martin.hnatko - 1. Konzultácia  ======
+
+==== Téma na projekt: Filmy – Rotten Tomatoes ====
+
+=== Motivácia ===
+
+Téma ma zaujíma, pretože filmy sledujem a nad týmito dátami sa dajú vytvoriť zaujímavé dopyty.
+
+=== Zdroj dát ===
+
+[[https://www.rottentomatoes.com/|Rotten Tomatoes]]
+
+Zaujímavé dáta:
+  * názov filmu
+  * režisér
+  * herci
+  * producent
+  * scenárista
+  * žáner
+  * rok a dátum vydania
+  * dĺžka filmu
+  * vekový rating
+  * produkčná spoločnosť
+  * jazyk
+
+Príklad stránky:
+
+[[https://www.rottentomatoes.com/m/inception|Inception - Rotten Tomatoes]]
+
+=== Prepojenie s Wikipédiou ===
+
+Dáta by sa spájali podľa názvu filmu a roku vydania.
+
+Príklady Wikipedia stránok:
+  * [[https://en.wikipedia.org/wiki/Inception|Inception]]
+  * [[https://en.wikipedia.org/wiki/Interstellar|Interstellar]]
+  * [[https://en.wikipedia.org/wiki/Oppenheimer_(film)|Oppenheimer]]
+
+Zaujímavé dáta z Wikipédie:
+  * autor hudby
+  * doplnenie hercov
+
+=== Príklady dopytov ===
+
+**Otázka 1:** Ktoré science-fiction filmy režíroval Christopher Nolan?\\
+**Odpoveď:** Inception, Interstellar, Tenet...
+
+**Otázka 2:** Ktoré filmy Christophera Nolana obsahujú Cilliana Murphyho?\\
+**Odpoveď:** Oppenheimer, Dunkirk, Inception, Batman Begins...
+
+**Otázka 3:** Nájdi horory kratšie ako 100 minút.\\
+**Odpoveď:** Zombieland, Host, REC...
+
+**Otázka 4:** Nájdi komédie vydané medzi rokmi 2010 a 2015.\\
+**Odpoveď:** 21 Jump Street, The Wolf of Wall Street...
+
+**Otázka 5:** Nájdi film o prenikaní do snov iných ľudí.\\
+**Odpoveď:** Inception.
+
+=== Robots.txt ===
+
+[[https://www.rottentomatoes.com/robots.txt|Rotten Tomatoes robots.txt]]
+
+Bežné stránky filmov v tvare ''/m/...'' nie su zakázané.
+
+
+1. Konzultacia - uzavrete

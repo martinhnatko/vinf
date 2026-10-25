@@ -19,20 +19,20 @@ class Searcher:
         with (directory / config["extracted_file"]).open(encoding="utf-8") as file:
             self.movies = [json.loads(line) for line in file]
 
-        count = self.index["document_count"]
-        self.idf = {}
+        count = len(self.movies)
+        self.idf = [0.0] * len(self.index["terms"])
         self.document_norms = [0.0] * count
 
         #calculate idf and full document norms once
-        for term, entry in self.index["terms"].items():
-            df = entry["df"]
+        for term_id, postings in enumerate(self.index["postings"]):
+            df = len(postings)
             if idf_method == "classic":
-                self.idf[term] = math.log(count / df)
+                self.idf[term_id] = math.log(count / df)
             else:
-                self.idf[term] = 1 + math.log((count + 1) / (df + 1))
+                self.idf[term_id] = 1 + math.log((count + 1) / (df + 1))
 
-            for document_id, tf in entry["postings"].items():
-                weight = tf * self.idf[term]
+            for document_id, tf in postings.items():
+                weight = tf * self.idf[term_id]
                 self.document_norms[int(document_id)] += weight ** 2
 
         self.document_norms = [math.sqrt(value) for value in self.document_norms]
@@ -40,15 +40,16 @@ class Searcher:
     def search(self, query, scoring):
         query_weights = {}
         for term, tf in Counter(tokenize(query)).items():
-            if term in self.idf:
-                query_weights[term] = tf * self.idf[term]
+            if term in self.index["terms"]:
+                term_id = self.index["terms"][term]
+                query_weights[term_id] = tf * self.idf[term_id]
 
         #only documents from query term postings are candidates
         scores = {}
-        for term, query_weight in query_weights.items():
-            for document_id, tf in self.index["terms"][term]["postings"].items():
+        for term_id, query_weight in query_weights.items():
+            for document_id, tf in self.index["postings"][term_id].items():
                 document_id = int(document_id)
-                document_weight = tf * self.idf[term]
+                document_weight = tf * self.idf[term_id]
                 scores[document_id] = scores.get(document_id, 0.0) + query_weight * document_weight
 
         if scoring in ("cosine", "cosine_popcornmeter"):

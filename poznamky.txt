@@ -75,3 +75,10 @@ v prvom projekte - ide o to ze vektorovy pouziteje na to aby ste mali rekorovske
 POZNAMKY PRE VEDUCEHO
 -neurobil som pauzavetlnost - je to velky problem?
 -vasa stranka mi stale dava ban a musim prepinat medzi vpnkami...
+
+
+
+-implementovat aj AND ?
+-pauzavatelnost ? 
+
+-v wiki treba ukazat dopyty celkovo - nie len prve miesto

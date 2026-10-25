@@ -240,51 +240,43 @@ def tokenize(text):
     return re.findall(r"\w+", text)
 </code>
 
-Príklad vstupu:
-
-<code>
-Dream_Horse is GREAT! 2021.
-</code>
-
-Po ''text.lower().replace("_", " ")'':
-
-<code>
-dream horse is great! 2021.
-</code>
-
-''re.findall(r"\w+", text)'' vráti:
-
-<code python>
-["dream", "horse", "is", "great", "2021"]
-</code>
-
-''\w'' znamená písmeno, číslicu alebo podčiarkovník a ''+'' znamená jeden alebo viac znakov. Podčiarkovníky pred regexom nahrádzame medzerami.
-
 Document ID je číslo riadku v ''movies.jsonl'', počítané od 0. Searcher používa rovnakú funkciu ''tokenize()'' importovanú z indexera.
 
-Pre každý term sa ukladá:
+Index obsahuje:
 
-  * ''df'' – počet dokumentov obsahujúcich term.
-  * ''postings'' – mapovanie document ID na raw TF, teda počet výskytov termu v dokumente.
+  * ''terms'' – slovník slovo → číselné term ID.
+  * ''postings'' – zoznam, kde pozícia predstavuje term ID. Každá položka mapuje document ID na raw TF, teda počet výskytov termu v dokumente.
+
+''df'' sa neukladá. Searcher ho získa ako počet dokumentov v príslušnom postings cez ''len(postings)''.
+
+Počet dokumentov N sa v indexe neukladá. Searcher ho zistí raz po načítaní ''movies.jsonl'' cez ''len(self.movies)'' a použije ho pri výpočte IDF aj pri vytvorení zoznamu noriem dokumentov.
 
 Index obsahuje **20 250 dokumentov a 50 393 termov**. Ukladá sa do ''data/index.json''.
 
-Ukážka skutočného termu z indexu:
+Ukážka skutočného termu zo slovníka ''terms'':
 
 <code json>
 {
-  "document_count": 20250,
-  "terms": {
-    "subconscious": {
-      "df": 3,
-      "postings": {
-        "8922": 1,
-        "9997": 1,
-        "18008": 1
-      }
-    }
-  }
+  "subconscious": 34437
 }
+</code>
+
+Záznam na pozícii 34437 v zozname ''postings'':
+
+<code json>
+{
+  "8922": 1,
+  "9997": 1,
+  "18008": 1
+}
+</code>
+
+Prístup k termu a výpočet DF:
+
+<code python>
+term_id = index["terms"]["subconscious"]
+postings = index["postings"][term_id]
+df = len(postings)  #3 documents
 </code>
 
 TF-IDF váhy sa neukladajú priamo. Searcher ich vypočíta z TF, DF a počtu dokumentov N podľa zvolenej IDF metódy.
@@ -369,3 +361,5 @@ Dream Horse sa posunie vyššie vďaka vysokému diváckemu hodnoteniu. Skóre f
 ===== 8. Záver =====
 
 Crawler a extractor sú hotové, dáta sú uložené v JSONL a nad nimi je vytvorený vlastný inverted index. Vyhľadávanie podporuje dve IDF varianty a tri scoring metódy vrátane vlastného rozšírenia s Popcornmetrom. Rozdiely vo váhovaní aj výslednom poradí sú viditeľné na reálnom testovacom dopyte.
+
+2b. Konzultacia - uzavrete

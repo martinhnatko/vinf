@@ -22,7 +22,8 @@ class Indexer:
         self.output_path = directory / config["index_file"]
 
     def build(self):
-        index = {"document_count": 0, "terms": {}}
+        index = {"terms": {}, "postings": []}
+        count = 0
 
         with self.input_path.open(encoding="utf-8") as file:
             for document_id, line in enumerate(file):
@@ -32,19 +33,20 @@ class Indexer:
 
                 for term, tf in frequencies.items():
                     if term not in index["terms"]:
-                        index["terms"][term] = {"df": 0, "postings": {}}
+                        index["terms"][term] = len(index["terms"])
+                        index["postings"].append({})
 
-                    #each term is counted once per document for df
-                    index["terms"][term]["df"] += 1
-                    index["terms"][term]["postings"][document_id] = tf
+                    #term id is the position in the postings list
+                    term_id = index["terms"][term]
+                    index["postings"][term_id][document_id] = tf
 
-                index["document_count"] += 1
+                count += 1
 
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         with self.output_path.open("w", encoding="utf-8") as file:
             json.dump(index, file, ensure_ascii=False)
 
-        print(f"[DONE] {index['document_count']} documents, {len(index['terms'])} terms -> {self.output_path}")
+        print(f"[DONE] {count} documents, {len(index['terms'])} terms -> {self.output_path}")
 
 
 if __name__ == "__main__":

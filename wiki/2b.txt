@@ -305,61 +305,88 @@ Cosine tento súčet normalizuje podľa veľkosti query a dokumentu; norma dokum
 **Vlastná ranking funkcia zvýhodňuje textovo relevantné filmy podľa Popcornmetra.**
 
 
-Rating nevytvára nových kandidátov: kandidáti stále pochádzajú iba z postings termov query.
+Rating nevytvára nových kandidátov: kandidáti stále pochádzajú iba z postings termov query. Stačí výskyt aspoň jedného termu, teda zjednotenie postings (OR); následne sa kandidáti zoradia podľa zvoleného scoringu.
 
 {{konzola-vypis.png|Konzola}}
 
 ===== 7. Porovnanie výsledkov =====
 
-Testovací dopyt:
+Dohľadanie troch konkrétnych filmov podľa zapamätaného deja alebo herca. Pri každej query porovnávam obe IDF metódy a všetky tri scoring metódy.
+
+==== 7.1. Interstellar ====
+
+Cieľ: **Interstellar**.
 
 <code>
-dream subconscious secrets
+matthew mcconaughey travels through a wormhole movie
 </code>
 
-^ IDF ^ Scoring ^ 1. výsledok ^ Jeho skóre ^ Pozícia Inception ^ Poznámka ^
-| classic | overlap | Inception | 96.227336 | 1. | Najvyšší súčet váh spoločných termov. |
-| classic | cosine | Inception | 0.212028 | 1. | Prvé zostáva aj po normalizácii. |
-| classic | cosine + popcornmeter | Inception | 0.404973 | 1. | Popcornmeter 91 zvýši skóre násobiteľom 1.91. |
-| smooth | overlap | Inception | 118.857458 | 1. | Zmena IDF nemení prvý výsledok. |
-| smooth | cosine | Dream a Little Dream | 0.201739 | 2. | Inception má skóre 0.191797. |
-| smooth | cosine + popcornmeter | Inception | 0.366332 | 1. | Po zohľadnení hodnotenia sa vracia na prvé miesto. |
+^ IDF ^ Scoring ^ 1. výsledok ^ Jeho skóre ^ Pozícia Interstellar ^
+| classic | overlap | Interstellar | 223.533504 | 1. |
+| classic | cosine | Interstellar | 0.353271 | 1. |
+| classic | cosine + popcornmeter | Interstellar | 0.660616 | 1. |
+| smooth | overlap | Interstellar | 288.609586 | 1. |
+| smooth | cosine | Interstellar | 0.332167 | 1. |
+| smooth | cosine + popcornmeter | Interstellar | 0.621152 | 1. |
 
-**Inception je prvé v 5 zo 6 kombinácií.** Jedinou výnimkou je smooth IDF + cosine, kde je prvé Dream a Little Dream a druhé Inception.
+Interstellar je prvý vo všetkých šiestich kombináciách. Meno Matthew McConaughey aj wormhole sú priamo v synopse, preto sa nájdu aj pri indexovaní iba title + synopsis.
 
-Počty dokumentov obsahujúcich termy sú overené z indexu:
+**Celý konzolový výpis: classic + cosine**
 
-^ Term ^ DF ^ Classic IDF ^ Smooth IDF ^
-| dream | 351 | 4.055124 | 5.052328 |
-| subconscious | 3 | 8.817298 | 9.529665 |
-| secrets | 275 | 4.299139 | 5.295559 |
+**[SCREENSHOT: nový query1.png – IDF 1, scoring 2, celá query a TOP 10 pre Interstellar]**
 
-Pri classic IDF má veľmi vzácny term ''subconscious'' vysokú váhu, čo pomáha filmu Inception. Smooth IDF relatívne znižuje jeho výhodu oproti častejšiemu ''dream'': oba termy dostanú vyššiu váhu, ale pomerný nárast je väčší pri ''dream''.
+Úplné výpisy všetkých šiestich kombinácií: {{interstellar.txt|interstellar.txt}}.
 
-Dream a Little Dream obsahuje term ''dream'' trikrát. Pri smooth IDF a cosine normalizácii sa preto dostáva pred Inception. Ide o dôsledok rozdielneho váhovania termov, nie chybu výpočtu.
+==== 7.2. Seven ====
 
-Inception obsahuje ''subconscious'' a ''secrets'' po jednom výskyte. Term ''dream'' v ňom nie je, pretože synopsa obsahuje tvar ''dreams'' a nepoužíva sa stemming.
-
-**Efekt vlastnej funkcie s Popcornmetrom**
-
-Porovnanie pri classic IDF:
-
-^ Film ^ Popcornmeter ^ Cosine: miesto ^ Cosine: skóre ^ Cosine + Popcornmeter: miesto ^ Výsledné skóre ^
-| Dream Horse | 97 | 5. | 0.143122 | 3. | 0.281950 |
-| Latency | 21 | 3. | 0.149679 | 10. | 0.181112 |
+Cieľ: **Seven**.
 
 <code>
-Dream Horse:
-0.143122 * (1 + 97 / 100) ≈ 0.281950
-
-Latency:
-0.149679 * (1 + 21 / 100) ≈ 0.181112
+movie about a serial killer who uses the seven deadly sins
 </code>
 
-Dream Horse sa posunie vyššie vďaka vysokému diváckemu hodnoteniu. Skóre filmu Latency tiež narastie, ale menej než skóre ostatných kandidátov, takže v poradí klesne. Textová podobnosť zostáva základom skóre; Popcornmeter ju násobí faktorom od 1 do 2 a zvýhodňuje lepšie hodnotené filmy medzi textovými kandidátmi.
+^ IDF ^ Scoring ^ 1. výsledok ^ Jeho skóre ^ Pozícia Seven ^
+| classic | overlap | Seven | 148.728406 | 1. |
+| classic | cosine | Dirty Sanchez: The Movie | 0.285962 | 2. |
+| classic | cosine + popcornmeter | Seven | 0.513918 | 1. |
+| smooth | overlap | Seven | 226.903358 | 1. |
+| smooth | cosine | Dirty Sanchez: The Movie | 0.295572 | 2. |
+| smooth | cosine + popcornmeter | Seven | 0.536635 | 1. |
+
+Seven je prvý pri overlap a po započítaní Popcornmetra. Pri cosine je druhý za Dirty Sanchez: The Movie, ktorého synopsa tiež obsahuje seven deadly sins. Seven má Popcornmeter 95; pri classic IDF jeho skóre stúpne z 0.263548 na 0.513918 a posunie sa na prvé miesto.
+
+**Celý konzolový výpis: classic + cosine**
+
+**[SCREENSHOT: nový query2.png – IDF 1, scoring 2, celá query a TOP 10 pre Seven]**
+
+Úplné výpisy všetkých šiestich kombinácií: {{seven.txt|seven.txt}}.
+
+==== 7.3. Inception ====
+
+Cieľ: **Inception**.
+
+<code>
+thief entering people's dreams to steal secrets movie
+</code>
+
+^ IDF ^ Scoring ^ 1. výsledok ^ Jeho skóre ^ Pozícia Inception ^
+| classic | overlap | Inception | 94.681443 | 1. |
+| classic | cosine | The Woman with Leopard Shoes | 0.232582 | 4. |
+| classic | cosine + popcornmeter | Inception | 0.338263 | 1. |
+| smooth | overlap | Inception | 151.183357 | 1. |
+| smooth | cosine | The Woman with Leopard Shoes | 0.227051 | 2. |
+| smooth | cosine + popcornmeter | Inception | 0.368692 | 1. |
+
+Inception je prvý pri overlap a po započítaní Popcornmetra. Pri cosine je štvrtý s classic IDF a druhý so smooth IDF; prvý je The Woman with Leopard Shoes. Bez stemmingu sa slovo entering nezhoduje s enter v synopse.
+
+**Celý konzolový výpis: classic + cosine**
+
+**[SCREENSHOT: nový query3.png – IDF 1, scoring 2, celá query a TOP 10 pre Inception]**
+
+Úplné výpisy všetkých šiestich kombinácií: {{inception.txt|inception.txt}}.
 
 ===== 8. Záver =====
 
-Crawler a extractor sú hotové, dáta sú uložené v JSONL a nad nimi je vytvorený vlastný inverted index. Vyhľadávanie podporuje dve IDF varianty a tri scoring metódy vrátane vlastného rozšírenia s Popcornmetrom. Rozdiely vo váhovaní aj výslednom poradí sú viditeľné na reálnom testovacom dopyte.
+Crawler a extractor sú hotové, dáta sú uložené v JSONL a nad nimi je vytvorený vlastný inverted index. Vyhľadávanie podporuje dve IDF varianty a tri scoring metódy vrátane vlastného rozšírenia s Popcornmetrom. Rozdiely vo váhovaní aj výslednom poradí sú viditeľné na troch dopytoch.
 
 2b. Konzultacia - uzavrete

@@ -1,5 +1,11 @@
 /app/data/raw/*
 
+for-llm/*
+
+prednasky/*
+
+wiki/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

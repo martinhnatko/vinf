@@ -1,5 +1,7 @@
 /app/data/raw/*
 
+poznamky.txt
+
 for-llm/*
 
 prednasky/*
